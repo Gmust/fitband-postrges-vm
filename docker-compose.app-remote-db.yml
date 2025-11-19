@@ -1,0 +1,39 @@
+version: '3.8'
+
+# Docker Compose for App VM connecting to remote PostgreSQL
+# This file should be used on the APP VM (not the PostgreSQL VM)
+# Update DATABASE_URL in .env.prod to point to your PostgreSQL VM's private IP
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: mock-fitband-api:prod
+    container_name: mock-fitband-api-app
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      # DATABASE_URL should point to remote PostgreSQL VM
+      # Format: postgresql://user:password@<POSTGRES_VM_PRIVATE_IP>:5432/dbname?schema=public
+      - DATABASE_URL=${DATABASE_URL}
+      - RUN_MIGRATIONS=${RUN_MIGRATIONS:-true}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Note: No depends_on for db since it's on a remote VM
+    # Ensure PostgreSQL VM is accessible before starting the app
+
