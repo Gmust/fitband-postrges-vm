@@ -29,7 +29,7 @@ services:
         max-size: "10m"
         max-file: "3"
     # Security: Only allow connections from specific IPs
-    # Configure via Azure NSG rules instead of here
+    # Configure via AWS Security Group rules instead of here
 
 volumes:
   postgres_data:
