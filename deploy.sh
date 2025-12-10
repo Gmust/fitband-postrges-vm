@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy PostgreSQL to separate VM
+# Deploy PostgreSQL to separate EC2 instance
 
 set -e
 
@@ -32,7 +32,7 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-echo -e "${BLUE}Deploying PostgreSQL to VM...${NC}"
+echo -e "${BLUE}Deploying PostgreSQL to EC2 instance...${NC}"
 
 # Create backups directory if it doesn't exist
 mkdir -p backups
@@ -57,18 +57,38 @@ else
     echo -e "${YELLOW}PostgreSQL is starting up, please wait...${NC}"
 fi
 
+# Get and display private IP
+PRIVATE_IP=$(hostname -I | awk '{print $1}')
+PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || echo "N/A")
+
 echo -e "${GREEN}✓ Deployment complete!${NC}"
 echo ""
-echo -e "${BLUE}Useful commands:${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}Connection Information:${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
+echo -e "  ${YELLOW}PostgreSQL EC2 Private IP:${NC} $PRIVATE_IP"
+echo -e "  ${YELLOW}PostgreSQL EC2 Public IP:${NC}  $PUBLIC_IP (for SSH only)"
+echo -e "  ${YELLOW}Database Port:${NC}             5432"
+echo -e "  ${YELLOW}Database Name:${NC}             ${POSTGRES_DB:-mock_fitband_db}"
+echo -e "  ${YELLOW}Database User:${NC}             ${POSTGRES_USER:-postgres}"
+echo ""
+echo -e "${YELLOW}⚠️  IMPORTANT - App EC2 Configuration:${NC}"
+echo -e "  Update your App EC2's DATABASE_URL:"
+echo -e "  ${GREEN}DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:<PASSWORD>@$PRIVATE_IP:5432/${POSTGRES_DB:-mock_fitband_db}?schema=public${NC}"
+echo ""
+echo -e "${YELLOW}⚠️  SECURITY - AWS Security Group Configuration:${NC}"
+echo -e "  Ensure AWS Security Group allows port 5432 ONLY from your App EC2's private IP"
+echo -e "  See README.md for detailed Security Group configuration steps"
+echo ""
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}Useful Commands:${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo "  View logs:        $DOCKER_COMPOSE -f $COMPOSE_FILE --env-file $ENV_FILE logs -f"
 echo "  View postgres logs: $DOCKER_COMPOSE -f $COMPOSE_FILE --env-file $ENV_FILE logs -f postgres"
 echo "  Stop service:     $DOCKER_COMPOSE -f $COMPOSE_FILE --env-file $ENV_FILE down"
 echo "  Restart service:  $DOCKER_COMPOSE -f $COMPOSE_FILE --env-file $ENV_FILE restart"
 echo "  View status:      $DOCKER_COMPOSE -f $COMPOSE_FILE --env-file $ENV_FILE ps"
 echo "  Connect to DB:    $DOCKER_COMPOSE -f $COMPOSE_FILE --env-file $ENV_FILE exec postgres psql -U \${POSTGRES_USER:-postgres} -d \${POSTGRES_DB:-mock_fitband_db}"
+echo "  Create backup:    ./backup.sh"
 echo ""
-echo -e "${YELLOW}Important:${NC}"
-echo "  - Get this VM's private IP: hostname -I | awk '{print \$1}'"
-echo "  - Update your app VM's DATABASE_URL to use this IP"
-echo "  - Ensure Azure NSG allows port 5432 from your app VM only"
 

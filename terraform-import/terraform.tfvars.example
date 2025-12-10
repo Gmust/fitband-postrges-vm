@@ -1,0 +1,25 @@
+# Copy this file to terraform.tfvars and update with your values
+# cp terraform.tfvars.example terraform.tfvars
+
+aws_region = "us-east-1"
+
+instance_name = "mock-fitband-postgres-vm"
+instance_type = "t3.micro"
+
+# Get latest Ubuntu 22.04 LTS AMI ID
+# Run: aws ec2 describe-images --owners 099720109477 --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" "Name=state,Values=available" --query 'Images | sort_by(@, &CreationDate) | [-1].ImageId' --output text
+ami_id = "ami-0c55b159cbfafe1f0"  # Ubuntu 22.04 LTS (us-east-1)
+
+# Your existing AWS key pair name
+key_pair_name = "your-key-pair-name"
+
+# Root volume size in GB
+volume_size = 30
+
+# Assign Elastic IP for static public IP
+assign_elastic_ip = true
+
+# Additional IPs allowed to connect to PostgreSQL (without /32)
+# Example: ["85.221.129.252", "10.0.0.5"]
+allowed_postgres_ips = []
+

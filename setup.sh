@@ -1,6 +1,6 @@
 #!/bin/bash
-# Setup script for PostgreSQL VM
-# Run this once on a fresh Azure VM (as root or with sudo)
+# Setup script for PostgreSQL EC2 instance
+# Run this once on a fresh AWS EC2 instance (as root or with sudo)
 
 set -e
 
@@ -11,7 +11,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}Setting up PostgreSQL VM...${NC}"
+echo -e "${BLUE}Setting up PostgreSQL EC2 instance...${NC}"
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
@@ -31,6 +31,8 @@ fi
 # Update system packages
 echo -e "${BLUE}Updating system packages...${NC}"
 if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
+    # Set non-interactive mode to avoid dialogs during package updates
+    export DEBIAN_FRONTEND=noninteractive
     apt-get update
     apt-get upgrade -y
     apt-get install -y curl wget git
@@ -76,28 +78,38 @@ fi
 if command -v ufw &> /dev/null; then
     echo -e "${BLUE}Configuring firewall...${NC}"
     ufw allow 22/tcp   # SSH
-    # PostgreSQL port will be configured via Azure NSG for better security
-    # ufw allow from <APP_VM_IP> to any port 5432  # Only from app VM
+    # PostgreSQL port will be configured via AWS Security Group for better security
+    # ufw allow from <APP_EC2_IP> to any port 5432  # Only from app EC2
     ufw --force enable
-    echo -e "${YELLOW}Note: Configure PostgreSQL port (5432) access via Azure NSG rules${NC}"
+    echo -e "${YELLOW}Note: Configure PostgreSQL port (5432) access via AWS Security Group rules${NC}"
 elif command -v firewall-cmd &> /dev/null; then
     echo -e "${BLUE}Configuring firewall (firewalld)...${NC}"
     firewall-cmd --permanent --add-service=ssh
-    # PostgreSQL will be configured via Azure NSG
+    # PostgreSQL will be configured via AWS Security Group
     firewall-cmd --reload
-    echo -e "${YELLOW}Note: Configure PostgreSQL port (5432) access via Azure NSG rules${NC}"
+    echo -e "${YELLOW}Note: Configure PostgreSQL port (5432) access via AWS Security Group rules${NC}"
 fi
 
-# Create backup directory
-echo -e "${BLUE}Creating backup directory...${NC}"
+# Create directory structure
+echo -e "${BLUE}Creating directory structure...${NC}"
 mkdir -p /opt/postgres-vm/backups
 chmod 755 /opt/postgres-vm/backups
 
-echo -e "${GREEN}✓ PostgreSQL VM setup complete!${NC}"
+# Set ownership to ubuntu (or current user if not root)
+if [ "$SUDO_USER" ]; then
+    chown -R $SUDO_USER:$SUDO_USER /opt/postgres-vm
+else
+    chown -R ubuntu:ubuntu /opt/postgres-vm
+fi
+
+echo -e "${GREEN}✓ PostgreSQL EC2 setup complete!${NC}"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Copy env.example to .env and configure it"
-echo "2. Update POSTGRES_PASSWORD with a strong password"
-echo "3. Configure Azure NSG to allow PostgreSQL access only from your app VM"
-echo "4. Run: ./deploy.sh"
+echo "1. Copy files to /opt/postgres-vm (if not already there)"
+echo "2. Copy env.example to .env: cp env.example .env"
+echo "3. Update POSTGRES_PASSWORD in .env with a strong password"
+echo "4. Set .env permissions: chmod 600 .env"
+echo "5. Configure AWS Security Group to allow PostgreSQL access only from your app EC2"
+echo "6. Run: ./deploy.sh"
+echo "7. Set up auto-start: sudo cp postgres-vm.service /etc/systemd/system/ && sudo systemctl enable postgres-vm"
 
